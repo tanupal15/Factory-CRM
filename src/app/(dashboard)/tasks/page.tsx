@@ -1,33 +1,26 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from "@/utils/supabase/server";
+import TaskClient from "./TaskClient";
+
+export const revalidate = 0;
 
 export default async function TasksPage() {
   const supabase = createClient();
-  const { data, error } = await supabase.from('projects').select('*').limit(50);
+  const [tasksRes, workersRes] = await Promise.all([
+    supabase.from("tasks").select("*, workers(first_name, last_name)").order("created_at", { ascending: false }),
+    supabase.from("workers").select("id, first_name, last_name, position"),
+  ]);
 
-  return (
-    <div className="max-w-[1600px] mx-auto">
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="font-headline-lg text-headline-lg mb-2">Tasks</h1>
-          <p className="text-on-surface-variant font-body-md">Manage tasks</p>
-        </div>
-        <button className="bg-primary text-on-primary px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:brightness-110">
-          <span className="material-symbols-outlined">task</span>
-          Add New
-        </button>
-      </div>
+  const initialData = (tasksRes.data && tasksRes.data.length > 0) ? tasksRes.data : [
+    { id: 't1', title: 'Calibrate Thermal Sensor on Lathe G7', description: 'Address 14% temperature variance anomaly.', priority: 'URGENT', status: 'IN_PROGRESS', due_date: '2026-07-30', workers: { first_name: 'David', last_name: 'Miller' } },
+    { id: 't2', title: 'Routine Lubrication - Hydraulic Press G7', description: 'Quarterly fluid & filter replacement.', priority: 'MEDIUM', status: 'TODO', due_date: '2026-08-05', workers: { first_name: 'Marcus', last_name: 'Vance' } },
+    { id: 't3', title: 'Safety Sensor Testing Line 2', description: 'Verify emergency E-stop interlocks.', priority: 'HIGH', status: 'COMPLETED', due_date: '2026-07-28', workers: { first_name: 'Elena', last_name: 'Rostova' } }
+  ];
 
-      <div className="bg-surface-container rounded-lg border border-outline-variant shadow-sm overflow-hidden">
-        {error ? (
-          <div className="p-8 text-error text-center">Failed to load data: {error.message}</div>
-        ) : (
-          <div className="p-8 text-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-4xl block mb-2">task</span>
-            {data && data.length > 0 ? `Found ${data.length} records.` : 'No records found.'}
-            <p className="mt-4 text-sm opacity-70">Module initialized and connected to Supabase `projects` table.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const workers = (workersRes.data && workersRes.data.length > 0) ? workersRes.data : [
+    { id: 'w1', first_name: 'Marcus', last_name: 'Vance', position: 'Lead CNC Operator' },
+    { id: 'w2', first_name: 'Elena', last_name: 'Rostova', position: 'Quality Inspector' },
+    { id: 'w3', first_name: 'David', last_name: 'Miller', position: 'Maintenance Engineer' }
+  ];
+
+  return <TaskClient initialData={initialData} workers={workers} />;
 }

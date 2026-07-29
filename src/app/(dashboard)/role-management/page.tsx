@@ -1,32 +1,64 @@
-import { createClient } from '@/utils/supabase/server';
+"use client";
 
-export default async function RoleManagementPage() {
-  const supabase = createClient();
-  const { data, error } = await supabase.from('profiles').select('*').limit(50);
+import { useState } from 'react';
+import { useToast } from '@/context/ToastContext';
+
+export default function RoleManagementPage() {
+  const { showToast } = useToast();
+  const [permissions, setPermissions] = useState({
+    SUPER_ADMIN: { read: true, write: true, delete: true, admin: true },
+    ADMIN: { read: true, write: true, delete: true, admin: false },
+    MANAGER: { read: true, write: true, delete: false, admin: false },
+    EMPLOYEE: { read: true, write: false, delete: false, admin: false },
+  });
+
+  const togglePerm = (role: keyof typeof permissions, perm: keyof typeof permissions.SUPER_ADMIN) => {
+    setPermissions((prev) => ({
+      ...prev,
+      [role]: {
+        ...prev[role],
+        [perm]: !prev[role][perm],
+      },
+    }));
+    showToast(`Updated ${perm} permission for ${role}`, "info");
+  };
 
   return (
-    <div className="max-w-[1600px] mx-auto">
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="font-headline-lg text-headline-lg mb-2">Role Management</h1>
-          <p className="text-on-surface-variant font-body-md">Manage rolemanagement</p>
-        </div>
-        <button className="bg-primary text-on-primary px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:brightness-110">
-          <span className="material-symbols-outlined">admin_panel_settings</span>
-          Add New
-        </button>
+    <div className="max-w-[1600px] mx-auto space-y-6">
+      <div>
+        <h1 className="font-headline-lg text-headline-lg mb-1">Role Permission Matrix (RBAC)</h1>
+        <p className="text-on-surface-variant font-body-md">Configure granular feature permissions and security access controls</p>
       </div>
 
-      <div className="bg-surface-container rounded-lg border border-outline-variant shadow-sm overflow-hidden">
-        {error ? (
-          <div className="p-8 text-error text-center">Failed to load data: {error.message}</div>
-        ) : (
-          <div className="p-8 text-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-4xl block mb-2">admin_panel_settings</span>
-            {data && data.length > 0 ? `Found ${data.length} records.` : 'No records found.'}
-            <p className="mt-4 text-sm opacity-70">Module initialized and connected to Supabase `profiles` table.</p>
-          </div>
-        )}
+      <div className="bg-surface-container rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-surface-container-high border-b border-outline-variant">
+            <tr>
+              <th className="px-6 py-3.5 font-label-xs text-on-surface-variant uppercase">Role Title</th>
+              <th className="px-6 py-3.5 font-label-xs text-on-surface-variant uppercase text-center">Read / View</th>
+              <th className="px-6 py-3.5 font-label-xs text-on-surface-variant uppercase text-center">Write / Create</th>
+              <th className="px-6 py-3.5 font-label-xs text-on-surface-variant uppercase text-center">Delete / Purge</th>
+              <th className="px-6 py-3.5 font-label-xs text-on-surface-variant uppercase text-center">System Admin</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-outline-variant">
+            {(Object.keys(permissions) as Array<keyof typeof permissions>).map((role) => (
+              <tr key={role} className="hover:bg-surface-container-highest transition-colors">
+                <td className="px-6 py-4 font-bold text-on-surface">{role}</td>
+                {(['read', 'write', 'delete', 'admin'] as const).map((perm) => (
+                  <td key={perm} className="px-6 py-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={permissions[role][perm]}
+                      onChange={() => togglePerm(role, perm)}
+                      className="w-4 h-4 accent-secondary rounded cursor-pointer"
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

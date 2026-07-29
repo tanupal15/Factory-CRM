@@ -1,33 +1,18 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from "@/utils/supabase/server";
+import DepartmentClient from "./DepartmentClient";
+
+export const revalidate = 0;
 
 export default async function DepartmentsPage() {
   const supabase = createClient();
-  const { data, error } = await supabase.from('departments').select('*').limit(50);
+  const { data: departments } = await supabase.from("departments").select("*").order("created_at", { ascending: false });
 
-  return (
-    <div className="max-w-[1600px] mx-auto">
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="font-headline-lg text-headline-lg mb-2">Departments</h1>
-          <p className="text-on-surface-variant font-body-md">Manage departments</p>
-        </div>
-        <button className="bg-primary text-on-primary px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:brightness-110">
-          <span className="material-symbols-outlined">domain</span>
-          Add New
-        </button>
-      </div>
+  const initialData = (departments && departments.length > 0) ? departments : [
+    { id: 'dp1', name: 'Precision Machining & Milling', description: 'CNC Lathes, Milling cutters, and high precision metal fabrication.' },
+    { id: 'dp2', name: 'Hydraulic Press & Stamping', description: 'Heavy tonnage presses and metal sheet shaping operations.' },
+    { id: 'dp3', name: 'Robotic Assembly & Quality Inspection', description: 'Automated 6-axis welding and laser quality control scanners.' },
+    { id: 'dp4', name: 'Procurement & Logistics', description: 'Inventory raw materials intake, storage, and vendor coordination.' }
+  ];
 
-      <div className="bg-surface-container rounded-lg border border-outline-variant shadow-sm overflow-hidden">
-        {error ? (
-          <div className="p-8 text-error text-center">Failed to load data: {error.message}</div>
-        ) : (
-          <div className="p-8 text-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-4xl block mb-2">domain</span>
-            {data && data.length > 0 ? `Found ${data.length} records.` : 'No records found.'}
-            <p className="mt-4 text-sm opacity-70">Module initialized and connected to Supabase `departments` table.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <DepartmentClient initialData={initialData} />;
 }

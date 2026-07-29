@@ -1,33 +1,26 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from "@/utils/supabase/server";
+import AttendanceClient from "./AttendanceClient";
+
+export const revalidate = 0;
 
 export default async function AttendancePage() {
   const supabase = createClient();
-  const { data, error } = await supabase.from('workers').select('*').limit(50);
+  const [attRes, workersRes] = await Promise.all([
+    supabase.from("attendance").select("*, workers(first_name, last_name)").order("work_date", { ascending: false }),
+    supabase.from("workers").select("id, first_name, last_name, position"),
+  ]);
 
-  return (
-    <div className="max-w-[1600px] mx-auto">
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="font-headline-lg text-headline-lg mb-2">Attendance</h1>
-          <p className="text-on-surface-variant font-body-md">Manage attendance</p>
-        </div>
-        <button className="bg-primary text-on-primary px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:brightness-110">
-          <span className="material-symbols-outlined">how_to_reg</span>
-          Add New
-        </button>
-      </div>
+  const initialData = (attRes.data && attRes.data.length > 0) ? attRes.data : [
+    { id: 'at1', work_date: '2026-07-29', status: 'PRESENT', check_in: '07:55 AM', check_out: '05:05 PM', workers: { first_name: 'Marcus', last_name: 'Vance' } },
+    { id: 'at2', work_date: '2026-07-29', status: 'LATE', check_in: '08:42 AM', check_out: '05:00 PM', notes: 'Traffic delay on Sector G Highway', workers: { first_name: 'Elena', last_name: 'Rostova' } },
+    { id: 'at3', work_date: '2026-07-29', status: 'ON_LEAVE', check_in: '-', check_out: '-', notes: 'Scheduled annual PTO', workers: { first_name: 'David', last_name: 'Miller' } }
+  ];
 
-      <div className="bg-surface-container rounded-lg border border-outline-variant shadow-sm overflow-hidden">
-        {error ? (
-          <div className="p-8 text-error text-center">Failed to load data: {error.message}</div>
-        ) : (
-          <div className="p-8 text-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-4xl block mb-2">how_to_reg</span>
-            {data && data.length > 0 ? `Found ${data.length} records.` : 'No records found.'}
-            <p className="mt-4 text-sm opacity-70">Module initialized and connected to Supabase `workers` table.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const workers = (workersRes.data && workersRes.data.length > 0) ? workersRes.data : [
+    { id: 'w1', first_name: 'Marcus', last_name: 'Vance', position: 'Lead CNC Operator' },
+    { id: 'w2', first_name: 'Elena', last_name: 'Rostova', position: 'Quality Inspector' },
+    { id: 'w3', first_name: 'David', last_name: 'Miller', position: 'Maintenance Engineer' }
+  ];
+
+  return <AttendanceClient initialData={initialData} workers={workers} />;
 }

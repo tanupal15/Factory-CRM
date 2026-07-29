@@ -1,33 +1,20 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from "@/utils/supabase/server";
+import MachineClient from "./MachineClient";
+
+export const revalidate = 0;
 
 export default async function MachinesPage() {
   const supabase = createClient();
-  const { data, error } = await supabase.from('machines').select('*').limit(50);
+  const { data: machines } = await supabase.from("machines").select("*").order("created_at", { ascending: false });
 
-  return (
-    <div className="max-w-[1600px] mx-auto">
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="font-headline-lg text-headline-lg mb-2">Machines</h1>
-          <p className="text-on-surface-variant font-body-md">Manage factory machines and equipment</p>
-        </div>
-        <button className="bg-primary text-on-primary px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:brightness-110">
-          <span className="material-symbols-outlined">precision_manufacturing</span>
-          Add Machine
-        </button>
-      </div>
+  // Fallback demo data if DB is empty
+  const initialData = (machines && machines.length > 0) ? machines : [
+    { id: 'm1', name: 'CNC Lathe G7', machine_code: 'MAC-8921-X', sector: 'Sector G-7', status: 'CRITICAL', created_at: new Date().toISOString() },
+    { id: 'm2', name: 'Hydraulic Press G7', machine_code: 'MAC-1044-Y', sector: 'Sector G-7', status: 'ACTIVE', created_at: new Date().toISOString() },
+    { id: 'm3', name: 'Robotic Arm Welder 04', machine_code: 'MAC-3021-Z', sector: 'Assembly Line 2', status: 'ACTIVE', created_at: new Date().toISOString() },
+    { id: 'm4', name: 'Stamping Press 12', machine_code: 'MAC-4410-A', sector: 'Sector B-3', status: 'WARNING', created_at: new Date().toISOString() },
+    { id: 'm5', name: 'Injection Molding Unit 02', machine_code: 'MAC-9002-M', sector: 'Plastics Bay', status: 'MAINTENANCE', created_at: new Date().toISOString() }
+  ];
 
-      <div className="bg-surface-container rounded-lg border border-outline-variant shadow-sm overflow-hidden">
-        {error ? (
-          <div className="p-8 text-error text-center">Failed to load data: {error.message}</div>
-        ) : (
-          <div className="p-8 text-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-4xl block mb-2">precision_manufacturing</span>
-            {data && data.length > 0 ? `Found ${data.length} records.` : 'No records found.'}
-            <p className="mt-4 text-sm opacity-70">Module initialized and connected to Supabase `machines` table.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <MachineClient initialData={initialData} />;
 }

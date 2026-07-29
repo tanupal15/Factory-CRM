@@ -1,33 +1,17 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from "@/utils/supabase/server";
+import ExpenseClient from "./ExpenseClient";
+
+export const revalidate = 0;
 
 export default async function ExpensesPage() {
   const supabase = createClient();
-  const { data, error } = await supabase.from('orders').select('*').limit(50);
+  const { data: expenses } = await supabase.from("expenses").select("*").order("expense_date", { ascending: false });
 
-  return (
-    <div className="max-w-[1600px] mx-auto">
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="font-headline-lg text-headline-lg mb-2">Expenses</h1>
-          <p className="text-on-surface-variant font-body-md">Manage expenses</p>
-        </div>
-        <button className="bg-primary text-on-primary px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:brightness-110">
-          <span className="material-symbols-outlined">payments</span>
-          Add New
-        </button>
-      </div>
+  const initialData = (expenses && expenses.length > 0) ? expenses : [
+    { id: 'ex1', title: 'Industrial Power Grid Utility - Sector G', category: 'UTILITIES', amount: 14250.00, expense_date: '2026-07-01', description: 'High voltage grid operational consumption' },
+    { id: 'ex2', title: 'Carbide Lathe Inserts Procurement', category: 'RAW_MATERIALS', amount: 3800.50, expense_date: '2026-07-10', description: 'Stock replacement for CNC G7' },
+    { id: 'ex3', title: 'Hydraulic Seals & Fluid Replacement', category: 'MAINTENANCE', amount: 1290.00, expense_date: '2026-07-18', description: 'Preventative press overhaul' }
+  ];
 
-      <div className="bg-surface-container rounded-lg border border-outline-variant shadow-sm overflow-hidden">
-        {error ? (
-          <div className="p-8 text-error text-center">Failed to load data: {error.message}</div>
-        ) : (
-          <div className="p-8 text-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-4xl block mb-2">payments</span>
-            {data && data.length > 0 ? `Found ${data.length} records.` : 'No records found.'}
-            <p className="mt-4 text-sm opacity-70">Module initialized and connected to Supabase `orders` table.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <ExpenseClient initialData={initialData} />;
 }
