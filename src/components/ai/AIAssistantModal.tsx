@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState } from 'react';
@@ -19,45 +20,53 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
-      text: 'Hello, I am Nexus AI, your factory floor copilot. Ask me anything about machine performance, stock forecasting, OEE metrics, or maintenance schedules.',
+      text: 'Hello, I am Nexus AI, your factory floor copilot powered by real LLM intelligence. Ask me anything about machine performance, stock forecasting, OEE metrics, or general questions (e.g. math, reasoning, code).',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
 
   if (!isOpen) return null;
 
-  const handleSend = (e?: React.FormEvent) => {
+  const handleSend = async (e?: React.FormEvent, customPrompt?: string) => {
     if (e) e.preventDefault();
-    if (!prompt.trim() || loading) return;
+    const textToSend = (customPrompt || prompt).trim();
+    if (!textToSend || loading) return;
 
-    const userText = prompt.trim();
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setMessages((prev) => [...prev, { sender: 'user', text: userText, time }]);
-    setPrompt('');
+    setMessages((prev) => [...prev, { sender: 'user', text: textToSend, time }]);
+    if (!customPrompt) setPrompt('');
     setLoading(true);
 
-    setTimeout(() => {
-      let responseText = `Analysis complete. Based on telemetry data and plant logs for "${userText}": Everything is operating within normal safety margins. OEE rate is 98.2%.`;
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: textToSend }),
+      });
 
-      const lower = userText.toLowerCase();
-      if (lower.includes('machine') || lower.includes('cnc') || lower.includes('lathe') || lower.includes('temp')) {
-        responseText = `⚠️ **Machine Alert (Sector G-7)**: CNC Lathe G7 shows a temperature variance of +14% (88°C). Recommended Action: Inspect bearing lubricant and reduce spindle speed by 10% during peak shift.`;
-      } else if (lower.includes('inventory') || lower.includes('stock') || lower.includes('sku') || lower.includes('order')) {
-        responseText = `📦 **Inventory Forecast**: SKU-8842 (Tungsten Carbide Blades) has dropped below safety threshold (12 units remaining). Recommended Reorder Quantity: 50 units from primary supplier.`;
-      } else if (lower.includes('worker') || lower.includes('shift') || lower.includes('efficiency')) {
-        responseText = `👥 **Workforce Intelligence**: Day shift attendance is 96.4%. Overall line productivity index is currently +4.2% above baseline.`;
-      }
+      const data = await res.json();
+      const replyText = data.reply || data.error || 'No response received from AI model.';
 
       setMessages((prev) => [
         ...prev,
         {
           sender: 'ai',
-          text: responseText,
+          text: replyText,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
+    } catch (err: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: 'ai',
+          text: `Error connecting to AI service: ${err.message}`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -71,7 +80,7 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
             </div>
             <div>
               <h3 className="font-bold text-on-surface text-base">Nexus AI Industrial Copilot</h3>
-              <p className="text-xs text-on-surface-variant">Realtime Telemetry & CRM Intelligence</p>
+              <p className="text-xs text-secondary font-semibold">Real LLM & Telemetry Connected</p>
             </div>
           </div>
           <button
@@ -90,9 +99,9 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
               className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-[85%] p-3.5 rounded-2xl text-sm leading-relaxed ${
+                className={`max-w-[85%] p-3.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                   m.sender === 'user'
-                    ? 'bg-secondary text-on-secondary rounded-tr-none'
+                    ? 'bg-secondary text-on-secondary rounded-tr-none font-medium'
                     : 'bg-surface-container-high border border-outline-variant text-on-surface rounded-tl-none'
                 }`}
               >
@@ -102,9 +111,9 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
             </div>
           ))}
           {loading && (
-            <div className="flex items-center gap-2 text-xs text-on-surface-variant italic p-2">
-              <span className="material-symbols-outlined animate-spin text-primary">sync</span>
-              Nexus AI is querying real-time plant metrics...
+            <div className="flex items-center gap-2 text-xs text-secondary font-medium animate-pulse p-2">
+              <span className="material-symbols-outlined animate-spin text-secondary">sync</span>
+              Nexus AI is processing prompt with LLM model...
             </div>
           )}
         </div>
@@ -112,38 +121,32 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
         {/* Quick Prompt Chips */}
         <div className="p-2 border-t border-outline-variant/50 bg-surface-container-low flex gap-2 overflow-x-auto text-xs">
           <button
-            onClick={() => {
-              setPrompt('Check CNC Lathe G7 health');
-            }}
-            className="px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant hover:border-secondary text-on-surface-variant shrink-0"
+            onClick={() => handleSend(undefined, 'What is 27 × 18?')}
+            className="px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant hover:border-secondary text-on-surface-variant shrink-0 font-medium"
+          >
+            🧮 27 × 18
+          </button>
+          <button
+            onClick={() => handleSend(undefined, 'Check CNC Lathe G7 health')}
+            className="px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant hover:border-secondary text-on-surface-variant shrink-0 font-medium"
           >
             🔍 Machine Health
           </button>
           <button
-            onClick={() => {
-              setPrompt('Forecast inventory reorders');
-            }}
-            className="px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant hover:border-secondary text-on-surface-variant shrink-0"
+            onClick={() => handleSend(undefined, 'Forecast inventory reorders')}
+            className="px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant hover:border-secondary text-on-surface-variant shrink-0 font-medium"
           >
             📦 Stock Forecast
-          </button>
-          <button
-            onClick={() => {
-              setPrompt('Summarize shift efficiency');
-            }}
-            className="px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant hover:border-secondary text-on-surface-variant shrink-0"
-          >
-            📊 Shift Report
           </button>
         </div>
 
         {/* Input Form */}
-        <form onSubmit={handleSend} className="p-3 border-t border-outline-variant bg-surface-container flex gap-2">
+        <form onSubmit={(e) => handleSend(e)} className="p-3 border-t border-outline-variant bg-surface-container flex gap-2">
           <input
             type="text"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Ask AI Assistant about plant metrics..."
+            placeholder="Ask AI Assistant anything (e.g. What is 27 × 18?)..."
             className="flex-1 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-secondary focus:outline-none"
           />
           <button
