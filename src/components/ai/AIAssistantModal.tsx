@@ -20,7 +20,7 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
-      text: 'Hello, I am Nexus AI, your factory floor copilot powered by real LLM intelligence. Ask me anything about machine performance, stock forecasting, OEE metrics, or general questions (e.g. math, reasoning, code).',
+      text: 'Hello, I am **Nexus AI**, your Enterprise Industrial Copilot. How can I assist you with machine health diagnostics, inventory forecasting, financial summaries, or general technical questions today?',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -33,15 +33,25 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
     if (!textToSend || loading) return;
 
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setMessages((prev) => [...prev, { sender: 'user', text: textToSend, time }]);
+    const newMessages = [...messages, { sender: 'user' as const, text: textToSend, time }];
+    setMessages(newMessages);
     if (!customPrompt) setPrompt('');
     setLoading(true);
+
+    // Format chat history for multi-turn LLM context
+    const historyPayload = newMessages.slice(1, -1).map((m) => ({
+      role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
+      content: m.text,
+    }));
 
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: textToSend }),
+        body: JSON.stringify({
+          prompt: textToSend,
+          history: historyPayload,
+        }),
       });
 
       const data = await res.json();
@@ -80,7 +90,7 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
             </div>
             <div>
               <h3 className="font-bold text-on-surface text-base">Nexus AI Industrial Copilot</h3>
-              <p className="text-xs text-secondary font-semibold">Real LLM & Telemetry Connected</p>
+              <p className="text-xs text-secondary font-semibold">Enterprise LLM Intelligence & Telemetry</p>
             </div>
           </div>
           <button
@@ -99,7 +109,7 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
               className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-[85%] p-3.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                className={`max-w-[88%] p-3.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                   m.sender === 'user'
                     ? 'bg-secondary text-on-secondary rounded-tr-none font-medium'
                     : 'bg-surface-container-high border border-outline-variant text-on-surface rounded-tl-none'
@@ -113,7 +123,7 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
           {loading && (
             <div className="flex items-center gap-2 text-xs text-secondary font-medium animate-pulse p-2">
               <span className="material-symbols-outlined animate-spin text-secondary">sync</span>
-              Nexus AI is processing prompt with LLM model...
+              Nexus AI is generating intelligent response...
             </div>
           )}
         </div>
@@ -138,6 +148,12 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
           >
             📦 Stock Forecast
           </button>
+          <button
+            onClick={() => handleSend(undefined, 'What is React?')}
+            className="px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant hover:border-secondary text-on-surface-variant shrink-0 font-medium"
+          >
+            💻 What is React?
+          </button>
         </div>
 
         {/* Input Form */}
@@ -146,7 +162,7 @@ export default function AIAssistantModal({ isOpen, onClose }: AIAssistantModalPr
             type="text"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Ask AI Assistant anything (e.g. What is 27 × 18?)..."
+            placeholder="Ask AI Assistant anything..."
             className="flex-1 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-secondary focus:outline-none"
           />
           <button
